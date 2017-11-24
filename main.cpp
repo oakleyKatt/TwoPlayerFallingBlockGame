@@ -25,7 +25,7 @@ std::string getRawFilename(char* full);
 Mat drawGridShade(Mat ogImg, std::vector<GridBlock> results);
 void generateTetrisBlock(Mat& tetrisBlock, std::vector<GridBlock> gridBlocks, const float blockTh);
 void generateTetrisBlock_grid(std::vector<std::vector<int> >& tetrisBlock, std::vector<GridBlock> gridBlocks, 
-		const float blockTh/*, const char* blockfilename*/);
+		const float blockTh, const char* blockfilename);
 
 void detectAndDisplay(Mat frame, const char* dataDir, const std::string filename);
 
@@ -55,7 +55,7 @@ int main(int argc, char** argv ) {
 	// argv[3]	threshold value used in imageDiff() method
 	// argv[4]	threshold % used to determine whether the GridBlock is a tetris block
 	
-	if(argc > 4) { 
+	if(argc > 2) { 
 			
 		// load the reference and compare images from the given image files
 	    Mat refImg;
@@ -72,9 +72,11 @@ int main(int argc, char** argv ) {
 	    }
 		
 		// stof() - converts string to float
-		float threshold = std::stof(argv[3]);
+		//float threshold = std::stof(argv[3]);
+		float threshold = 20;
 		// Threshold % used to determine whether the GridBlock is a tetris block
-		blockTh = std::stof(argv[4])/100;
+		//blockTh = std::stof(argv[4])/100;
+		blockTh = 0.05;
 		
 		std::cout << "Threshold = " << threshold << "\n";
 		std::cout << "Block Threshold = " << blockTh << "\n";
@@ -87,6 +89,26 @@ int main(int argc, char** argv ) {
 		
 		// Blob Detection
 		// Apply Median Filter (blur) before passing it to blob detection
+		Mat medianImg;
+		medianBlur(diffMask, medianImg, 23);
+	
+		// Analyze the difference mask
+		std::vector<GridBlock> result;
+		result = analyzeMask(medianImg, 5, 5);
+		//Mat gridGradient(cmpImg.rows, cmpImg.cols, CV_8UC3, Scalar(0, 0, 0));
+		
+		//Mat tetrisBlock(cmpImg.rows, cmpImg.cols, CV_8UC3, Scalar(0, 0, 0));
+		//cvtColor(cmpImg, tetrisBlock, COLOR_BGR2GRAY);
+		//generateTetrisBlock(tetrisBlock, result, blockTh);
+		//tetrisBlock = drawGrid(tetrisBlock, M, N, red);
+
+		//const char* blockDataFile[6] = {'b','l','o','c','k',i};
+		// Initialize 2D tetris block grid array (0 = no block, 1 = block)
+		std::vector<std::vector<int> > tBlock(M, std::vector<int>(N, 0));
+		generateTetrisBlock_grid(tBlock, result, blockTh, argv[3]);
+		//generateTetrisBlock_grid(tBlock, result, blockTh);
+		
+		/*
 		for(int i = 5; i < 37; i+=6) {
 			Mat medianImg;
 			medianBlur(diffMask, medianImg, i);
@@ -104,13 +126,15 @@ int main(int argc, char** argv ) {
 			//const char* blockDataFile[6] = {'b','l','o','c','k',i};
 			// Initialize 2D tetris block grid array (0 = no block, 1 = block)
 			std::vector<std::vector<int> > tBlock(M, std::vector<int>(N, 0));
-			generateTetrisBlock_grid(tBlock, result, blockTh/*, blockDataFile*/);
+			//generateTetrisBlock_grid(tBlock, result, blockTh, blockDataFile);
+			generateTetrisBlock_grid(tBlock, result, blockTh);
 			
 			// Add grid to median img and Save it
 			medianImg = drawGrid(medianImg, M, N, red);
 			
 			std::cout << "----------------------------\n";
 		}
+		*/
 	}
     return 0;
 }
@@ -126,16 +150,16 @@ void generateTetrisBlock(Mat& tetrisBlock, std::vector<GridBlock> gridBlocks, co
 }
 
 void generateTetrisBlock_grid(std::vector<std::vector<int> >& tetrisBlock, std::vector<GridBlock> gridBlocks,
-	 	const float blockTh/*, const char* blockfilename*/) {
+	 	const float blockTh, const char* blockfilename) {
 	// Initialize outfile stream for storing the 0/1s of the tetris block
-	//std::ofstream blockfile(blockfilename);
+	std::ofstream blockfile(blockfilename);
 	int row = 0; //tetrisBlock.size();
 	int col = 0; //tetrisBlock[0].size();
 	//for(std::vector<GridBlock>::iterator it = gridBlocks.begin(); it != gridBlocks.end(); ++it) {
 	for (int i = 0; i < gridBlocks.size(); i++) {
 		tetrisBlock[row][col] = (gridBlocks[i].isTetrisBlock(blockTh)) ? 1:0;
-		std::cout << tetrisBlock[row][col] << " ";
-		//blockfile << tetrisBlock[row][col] << " ";
+		//std::cout << tetrisBlock[row][col] << " ";
+		blockfile << tetrisBlock[row][col] << " ";
 		// If the GridBlock has more % black pixels than the given threshold %
 		/*
 		if(it->isTetrisBlock(blockTh)) {
@@ -149,8 +173,8 @@ void generateTetrisBlock_grid(std::vector<std::vector<int> >& tetrisBlock, std::
 		if (col == (tetrisBlock[0].size() - 1)) {
 			row++;
 			col = 0;
-			std::cout << "\n";
-			//blockfile << "\n";
+			//std::cout << "\n";
+			blockfile << "\n";
 		}else {
 			col++;
 		}
